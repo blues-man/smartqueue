@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Command line arguments given to this script
+args="$*"
+
+# Global S2I variable setup
+source /usr/local/s2i/s2i-setup
+
+exec ${DEPLOYMENTS_DIR}/esselunga.pl
