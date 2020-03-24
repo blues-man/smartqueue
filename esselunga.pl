@@ -40,11 +40,11 @@ use DBI;
 
 
 my $DEBUG = 1;
-my $smtp_server = 'mail.tresud.it';
-my $smtp_user = 'tresud.it';
-my $smtp_pass = 'womangaw';
-my $smtp_port = '587';
-
+my $smtp_server = '';
+my $smtp_user = '';
+my $smtp_pass = '';
+my $smtp_port = '';
+my $email_from = '';
 
 my %options = ();
 my $username = '';
@@ -106,10 +106,9 @@ sub send_mail {
     for (my $i = 1; $i < scalar(@emails); $i++){ 
         $cc.="$emails[$i],";
     }
-    my $from = 'info@tresud.it';
+    my $from = $email_from;
     my $subject = 'Slot disponibili';
     my $message = $body;
-    
     
     
     my $msg = MIME::Lite->new(
