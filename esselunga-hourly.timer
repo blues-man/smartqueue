@@ -1,0 +1,10 @@
+[Unit]
+Description=Esselunga slot checker hourly
+
+[Timer]
+OnCalendar=*-*-* 00,07..19:00:00
+Unit=esselunga.service
+
+[Install]
+WantedBy=multi-user.target
+

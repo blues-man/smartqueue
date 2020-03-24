@@ -1,0 +1,11 @@
+[Unit]
+Description=Esselunga slots checker
+
+[Service]
+User=natale
+Type=simple
+ExecStart=/some/path/esselunga.sh
+
+[Install]
+WantedBy=multi-user.target
+
