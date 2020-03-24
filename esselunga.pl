@@ -44,12 +44,14 @@ my $smtp_server = '';
 my $smtp_user = '';
 my $smtp_pass = '';
 my $smtp_port = '';
+
 my $email_from = '';
 
 my %options = ();
 my $username = '';
 my $password = '';
 my $email = '';
+my $city = '';
 
 if ($ENV{USERNAME} && $ENV{PASSWORD}) {
 
@@ -60,21 +62,27 @@ if ($ENV{USERNAME} && $ENV{PASSWORD}) {
     $email = $ENV{EMAIL}; 
   }
 } else {
-    getopt( 'upe', \%options );
+    getopt( 'upec', \%options );
 
     if ( !$options{u} || !$options{p} ) {
         say "Opzioni: -u USERNAME -p PASSWORD [-e EMAIL]\n";
         say "Esempio: esselunga.pl -u esempio\@gmail.com -p password";
+        say "Esempio:  esselunga.pl -u esempio\@gmail.com -p password -e esempio\@gmail.com,altro\@gmail.com -c milano";
         exit 1;
     }
     $username = $options{u};
     $password = $options{p};
+    
     if ($options{e}){
         $email = $options{e};
     }
+    
+    if ($options{c}){
+        $city = "-".$options{c};
+    }
 }
 
-my $dbfile = "esselunga.sqlite";
+my $dbfile = "esselunga$city.sqlite";
 my $dbh =
     DBI->connect( "dbi:SQLite:dbname=$dbfile", "", "",
     { RaiseError => 1 } )
@@ -115,7 +123,7 @@ sub send_mail {
                     From     => $from,
                     To       => \@emails,
                     Type     => 'TEXT',
-                    Cc       => $cc,
+                    #Cc       => $cc,
                     Subject  => $subject,
                     Data     => $message
                     );
