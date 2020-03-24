@@ -4,6 +4,6 @@
 args="$*"
 
 # Global S2I variable setup
-source /usr/local/s2i/s2i-setup
+#source /usr/local/s2i/s2i-setup
 
-exec ${DEPLOYMENTS_DIR}/esselunga.pl
+exec /opt/app-root/src/esselunga.pl
