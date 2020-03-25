@@ -6,4 +6,5 @@ args="$*"
 # Global S2I variable setup
 #source /usr/local/s2i/s2i-setup
 
+export PERL5LIB=/opt/app-root/src/extlib/lib/perl5
 exec /opt/app-root/src/esselunga.pl
