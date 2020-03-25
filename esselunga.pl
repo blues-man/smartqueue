@@ -121,9 +121,9 @@ sub send_mail {
     
     my $msg = MIME::Lite->new(
                     From     => $from,
-                    To       => \@emails,
+                    To       => $to,
                     Type     => 'TEXT',
-                    #Cc       => $cc,
+                    Bcc      => $cc,
                     Subject  => $subject,
                     Data     => $message
                     );
