@@ -35,7 +35,9 @@ use Encode;
 use MIME::Lite;
 use MIME::Base64;
 use Authen::SASL;
+use JSON::MaybeXS;
 use DBI;
+
 
 
 
@@ -231,15 +233,20 @@ unless ( $res->is_success ) {
 my $ok = 0;
 my $slots = '';
 my $html = '';
-while ( $content =~
-/"viewStatus":"(.+?)"(.+?)"endTime":"(.+?)"(.+?)"startTime":"(.+?)","status":"(.+?)"/gi
-  )
-{
-    my $status     = $1;
-    my $start_time = $5;
-    my $end_time   = $3;
-    my $s_status   = $6;
 
+my $records = decode_json($content);
+my $json = $records->{slots};
+
+
+for my $hashref (@{$json}) {
+    #foreach my $key (keys %{$hashref}){
+        my $status     = $hashref->{viewStatus};
+        my $start_time = $hashref->{startTime};
+        my $end_time   = $hashref->{endTime};
+        my $s_status   = $hashref->{status};
+        
+        say "$status - $start_time - $end_time $s_status" if $DEBUG;
+        
     if (   $status ne 'ESAURITA'
         && $status ne 'INIBITA'
         && $s_status ne 'DISABLED' )
@@ -263,13 +270,9 @@ while ( $content =~
         
         say $slots;
         $ok = 1;
-        my $sth = $dbh->prepare('UPDATE OR IGNORE slots SET email_sent = 1 WHERE start_time = ?');
-        $sth->execute($start_time) or die $DBI::errstr;
 
-        $sth = $dbh->prepare("INSERT OR IGNORE INTO slots(start_time, email_sent, text) VALUES(?,?,?)");
+        my $sth = $dbh->prepare("INSERT OR IGNORE INTO slots(start_time, email_sent, text) VALUES(?,?,?)");
         $sth->execute($start_time, 0, $slots) or die $DBI::errstr;
-
-        #$html  .= "<p>SLOT: <b>$status</b> - Inizio: "
     }
 
 }
@@ -294,6 +297,10 @@ if ($ok) {
     
     if ($email ne ''){
             send_mail($email, $send_text);
+            
+            $sth = $dbh->prepare('UPDATE slots set email_sent = 1 WHERE start_time IN (SELECT start_time FROM slots WHERE email_sent = 0);');
+            $sth->execute() or die $DBI::errstr;
+            
     }
 
 } else {
