@@ -16,6 +16,15 @@ Esselungaacasa.it smart free delivery slots alerting system
 # apt-get install -y libauthen-sasl-perl libmime-lite-perl libdbd-sqlite3-perl libwww-perl
 ```
 
+### Timer & Systemd
+
+```
+# cp esselunga@.service esselunga-hourly.timer /usr/lib/systemd/system
+# systemctl enable esselunga@.service
+# systemctl enable esselunga-hourly.timer
+# systemctl start esselunga-hourly.timer
+# systemctl list-timers
+```
 ## Usage
 
 ```
