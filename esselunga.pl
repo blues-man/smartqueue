@@ -53,7 +53,7 @@ my %options = ();
 my $username = '';
 my $password = '';
 my $email = '';
-my $city = '';
+#my $city = '';
 
 if ($ENV{USERNAME} && $ENV{PASSWORD}) {
 
@@ -69,7 +69,7 @@ if ($ENV{USERNAME} && $ENV{PASSWORD}) {
     if ( !$options{u} || !$options{p} ) {
         say "Opzioni: -u USERNAME -p PASSWORD [-e EMAIL]\n";
         say "Esempio: esselunga.pl -u esempio\@gmail.com -p password";
-        say "Esempio:  esselunga.pl -u esempio\@gmail.com -p password -e esempio\@gmail.com,altro\@gmail.com -c milano";
+        say "Esempio:  esselunga.pl -u esempio\@gmail.com -p password -e esempio\@gmail.com,altro\@gmail.com";
         exit 1;
     }
     $username = $options{u};
@@ -79,12 +79,9 @@ if ($ENV{USERNAME} && $ENV{PASSWORD}) {
         $email = $options{e};
     }
     
-    if ($options{c}){
-        $city = "-".$options{c};
-    }
 }
 
-my $dbfile = "esselunga$city.sqlite";
+my $dbfile = "esselunga.sqlite";
 my $dbh =
     DBI->connect( "dbi:SQLite:dbname=$dbfile", "", "",
     { RaiseError => 1 } )
@@ -92,9 +89,11 @@ or die $DBI::errstr;
 
 
 my $stmt = qq(CREATE TABLE IF NOT EXISTS slots
-(   start_time  DATETIME NOT NULL UNIQUE,
-    email_sent    INT     NOT NULL,
-    text          VARCHAR(50)););
+(   username      TEXT NOT NULL,
+    start_time    DATETIME NOT NULL,
+    email_sent    INTEGER     NOT NULL,
+    text          TEXT,
+    PRIMARY KEY (username, start_time)););
 
 my $rv = $dbh->do($stmt);
 if($rv < 0) {
@@ -149,7 +148,7 @@ my $res     = $ua->get($url);
 my $content = '';
 
 unless ( $res->is_success ) {
-    say "Non posso raggiungere il sito esselunga.it, skipping";
+    say "Non posso raggiungere il sito esselunga.it, skipping". $res->content;
     exit 1;
 
 }
@@ -208,6 +207,8 @@ unless ( $resp->is_success && $content =~ /<img src="\/html\/images\/logo-esselu
     exit 1;
 }
 say "Login OK";
+
+
 my $cookies = $cookiejar->as_string;
 my $xsfr    = '';
 
@@ -241,7 +242,6 @@ my $json = $records->{slots};
 
 
 for my $hashref (@{$json}) {
-    #foreach my $key (keys %{$hashref}){
         my $status     = $hashref->{viewStatus};
         my $start_time = $hashref->{startTime};
         my $end_time   = $hashref->{endTime};
@@ -249,9 +249,9 @@ for my $hashref (@{$json}) {
         
         say "$status - $start_time - $end_time $s_status" if $DEBUG;
         
-    if (   $status ne 'ESAURITA'
-        && $status ne 'INIBITA'
-        && $s_status ne 'DISABLED' )
+    if (   $status eq 'ESAURITA'
+        || $status eq 'INIBITA'
+        || $s_status eq 'DISABLED' )
     {
 
         my $start_time_date = '';
@@ -273,8 +273,8 @@ for my $hashref (@{$json}) {
         say $slots;
         $ok = 1;
 
-        my $sth = $dbh->prepare("INSERT OR IGNORE INTO slots(start_time, email_sent, text) VALUES(?,?,?)");
-        $sth->execute($start_time, 0, $slots) or die $DBI::errstr;
+        my $sth = $dbh->prepare("INSERT OR IGNORE INTO slots(start_time, username, email_sent, text) VALUES(?,?,?,?)");
+        $sth->execute($start_time, $username, 0, $slots) or die $DBI::errstr;
     }
 
 }
@@ -283,7 +283,7 @@ say "Check slot completo";
 if ($ok) {
     say "BINGO!";
     
-    my $sth = $dbh->prepare("SELECT text FROM slots WHERE email_sent = 0")
+    my $sth = $dbh->prepare("SELECT text FROM slots WHERE email_sent = 0 AND username = '$username'")
             or die "prepare statement failed: $dbh->errstr()";
     
     $sth->execute() or die "execution failed: $dbh->errstr()"; 
@@ -298,10 +298,11 @@ if ($ok) {
     
     
     if ($email ne ''){
-            send_mail($email, $send_text);
+            #send_mail($email, $send_text);
             
-            $sth = $dbh->prepare('UPDATE slots set email_sent = 1 WHERE start_time IN (SELECT start_time FROM slots WHERE email_sent = 0);');
+            $sth = $dbh->prepare("UPDATE slots set email_sent = 1 WHERE start_time IN (SELECT start_time FROM slots WHERE email_sent = 0 AND username = '$username');");
             $sth->execute() or die $DBI::errstr;
+            say "Inviata";
             
     }
 
