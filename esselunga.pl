@@ -215,6 +215,9 @@ my $xsfr    = '';
 if ( $cookies =~ /XSRF-ECOM-TOKEN=(.*?);/ ) {
     $xsfr = $1;
     say "XSFR: $xsfr" if $DEBUG;
+} else {
+    say "Non posso estrarre il cookie XSFR";
+    exit 1;
 }
 
 $ua->default_header( 'Content-Type' => 'application/json' );
