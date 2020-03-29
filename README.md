@@ -7,7 +7,7 @@ Esselungaacasa.it smart free delivery slots alerting system
 ### Fedora/CentOS
 
 ```
-# dnf install -y perl-libwww-perl perl-Authen-SASL perl-DBD-SQLite perl-DBD-SQLite perl-MIME-Lite perl-JSON-MaybeXS
+# dnf install -y perl-libwww-perl perl-LWP-Protocol-https perl-Authen-SASL perl-DBD-SQLite perl-DBD-SQLite perl-MIME-Lite perl-JSON-MaybeXS
 ```
 
 ### Debian/Ubuntu
