@@ -42,6 +42,8 @@ use DBI;
 
 
 my $DEBUG = 1;
+my $VERBOSE = 0;
+my $smtp_server_ssl = 1;
 my $smtp_server = '';
 my $smtp_user = '';
 my $smtp_pass = '';
@@ -53,7 +55,63 @@ my %options = ();
 my $username = '';
 my $password = '';
 my $email = '';
-#my $city = '';
+
+sub fill_smtp_settings {
+
+    if ($ENV{SMTP_SERVER}){
+        $smtp_server = $ENV{SMTP_SERVER};
+    }
+
+    if ($ENV{SMTP_USER}){
+        $smtp_user = $ENV{SMTP_USER};
+    }
+
+    if ($ENV{SMTP_PASS}){
+        $smtp_pass = $ENV{SMTP_SERVER};
+    }
+
+    if ($ENV{SMTP_PORT}){
+        $smtp_port = $ENV{SMTP_PORT};
+    }
+
+    if ($ENV{EMAIL_FROM}){
+        $email_from = $ENV{EMAIL_FROM};
+    }
+
+    if ($ENV{SMTP_SERVER_SSL}){
+        $smtp_server_ssl = $ENV{SMTP_SERVER_SSL};
+        $smtp_server_ssl = 1 if  $smtp_server_ssl !~ /\d+/;
+    }
+
+    say "Uso server SMTP: $smtp_server User: $smtp_user Port: $smtp_port Email: $email_from" if $DEBUG;
+}
+
+sub send_mail {
+    my ($emails,$body) = @_;
+    my @emails = split(/,/, $emails);
+    my $to = $emails[0];
+    my $cc = '';
+    for (my $i = 1; $i < scalar(@emails); $i++){ 
+        $cc.="$emails[$i],";
+    }
+    my $from = $email_from;
+    my $subject = 'Slot disponibili';
+    my $message = $body;
+    
+    
+    my $msg = MIME::Lite->new(
+                    From     => $from,
+                    To       => $to,
+                    Type     => 'TEXT',
+                    Bcc      => $cc,
+                    Subject  => $subject,
+                    Data     => $message
+                    );
+
+    #$msg->attr("content-type" => "text/html");         
+    $msg->send('smtp', $smtp_server, AuthUser=>$smtp_user, AuthPass=>$smtp_pass,  SSL => $smtp_server_ssl, Port => $smtp_port  );
+    say "Email Inviata!";
+}
 
 if ($ENV{USERNAME} && $ENV{PASSWORD}) {
 
@@ -61,15 +119,17 @@ if ($ENV{USERNAME} && $ENV{PASSWORD}) {
   $password = $ENV{PASSWORD};
   
   if ($ENV{EMAIL}){
-    $email = $ENV{EMAIL}; 
+    $email = $ENV{EMAIL};
+    fill_smtp_settings();
   }
 } else {
-    getopt( 'upec', \%options );
+    getopt( 'upe', \%options );
 
     if ( !$options{u} || !$options{p} ) {
         say "Opzioni: -u USERNAME -p PASSWORD [-e EMAIL]\n";
         say "Esempio: esselunga.pl -u esempio\@gmail.com -p password";
-        say "Esempio:  esselunga.pl -u esempio\@gmail.com -p password -e esempio\@gmail.com,altro\@gmail.com";
+        say "Esempio: esselunga.pl -u esempio\@gmail.com -p password -e esempio\@gmail.com,altro\@gmail.com";
+        say "Esempio: SMTP_SERVER=smtp.test.com SMTP_USER=test SMTP_PASS=pass SMTP_PORT=587 SMTP_SERVER_SSL=1 EMAIL_FROM=info\@test.it esselunga.pl -u esempio\@gmail.com -p password -e esempio\@gmail.com,altro\@gmail.com";
         exit 1;
     }
     $username = $options{u};
@@ -77,6 +137,7 @@ if ($ENV{USERNAME} && $ENV{PASSWORD}) {
     
     if ($options{e}){
         $email = $options{e};
+        fill_smtp_settings();
     }
     
 }
@@ -105,38 +166,6 @@ if($rv < 0) {
 
 my $url =
 'https://www.esselunga.it/area-utenti/applicationCheck?appName=esselungaEcommerce&daru=https%3A%2F%2Fwww.esselungaacasa.it%3A443%2Fecommerce%2Fnav%2Fauth%2Fsupermercato%2Fhome.html%3F&loginType=light';
-
-
-sub send_mail {
-    my ($emails,$body) = @_;
-    my @emails = split(/,/, $emails);
-    my $to = $emails[0];
-    my $cc = '';
-    for (my $i = 1; $i < scalar(@emails); $i++){ 
-        $cc.="$emails[$i],";
-    }
-    my $from = $email_from;
-    my $subject = 'Slot disponibili';
-    my $message = $body;
-    
-    
-    my $msg = MIME::Lite->new(
-                    From     => $from,
-                    To       => $to,
-                    Type     => 'TEXT',
-                    Bcc      => $cc,
-                    Subject  => $subject,
-                    Data     => $message
-                    );
-                    
-    #$msg->attr("content-type" => "text/html");         
-    $msg->send('smtp', $smtp_server, AuthUser=>$smtp_user, AuthPass=>$smtp_pass,  SSL => 1, Port => $smtp_port  );
-    say "Email Inviata!";
-}
-
-
-    
-
 
 
 my $ua        = LWP::UserAgent->new();
@@ -208,14 +237,16 @@ unless ( $resp->is_success && $content =~ /<img src="\/html\/images\/logo-esselu
 }
 say "Login OK";
 
-
-my $cookies = $cookiejar->as_string;
 my $xsfr    = '';
 
-if ( $cookies =~ /XSRF-ECOM-TOKEN=(.*?);/ ) {
-    $xsfr = $1;
-    say "XSFR: $xsfr" if $DEBUG;
-} else {
+$cookiejar ->scan(sub { 
+  if ($_[1] eq 'XSRF-ECOM-TOKEN') { 
+    $xsfr = $_[2]; 
+  }; 
+});
+
+
+if ($xsfr eq ''){
     say "Non posso estrarre il cookie XSFR";
     exit 1;
 }
@@ -247,11 +278,11 @@ for my $hashref (@{$json}) {
         my $end_time   = $hashref->{endTime};
         my $s_status   = $hashref->{status};
         
-        say "$status - $start_time - $end_time $s_status" if $DEBUG;
+        say "$status - $start_time - $end_time $s_status" if $VERBOSE;
         
-    if (   $status eq 'ESAURITA'
-        || $status eq 'INIBITA'
-        || $s_status eq 'DISABLED' )
+    if (   $status ne 'ESAURITA'
+        && $status ne 'INIBITA'
+        && $s_status ne 'DISABLED' )
     {
 
         my $start_time_date = '';

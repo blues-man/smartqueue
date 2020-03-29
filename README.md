@@ -29,13 +29,14 @@ Esselungaacasa.it smart free delivery slots alerting system
 
 ```
 $ ./esselunga.pl -u username -p password
-$ ./esselunga.pl -u username -p password -e email@test.com,email1@test.com,email2.test.com -c milano
-$ USERNAME=username PASSWORD=password EMAIL=email@test.com ./esselunga.pl
+$ ./esselunga.pl -u username -p password -e email@test.com,email1@test.com,email2.test.com
+$ SMTP_SERVER=smtp.test.com SMTP_USER=test SMTP_PASS=pass SMTP_PORT=587 SMTP_SERVER_SSL=1 EMAIL_FROM=info@test.it ./esselunga.pl -u username -p password -e email@test.com,email1@test.com,email2.test.com
+$ USERNAME=username PASSWORD=password EMAIL=email@test.com SMTP_SERVER=smtp.test.com SMTP_USER=test SMTP_PASS=pass SMTP_PORT=587 SMTP_SERVER_SSL=1 EMAIL_FROM=info@test.it ./esselunga.pl
 ```
 
 ### OpenShift
 
 ```
-$ oc new-app https://github.com/blues-man/smartqueue.git --env USERNAME=user --env PASSWORD=pass --env EMAIL=email@test.com 
+$ oc new-app https://github.com/blues-man/smartqueue.git --env USERNAME=user --env PASSWORD=pass SMTP_SERVER=smtp.test.com SMTP_USER=test SMTP_PASS=pass SMTP_PORT=587 SMTP_SERVER_SSL=1 EMAIL_FROM=info@test.it
 ```
 
