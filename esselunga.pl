@@ -202,12 +202,11 @@ $res = POST 'https://www.esselunga.it/area-utenti/loginExt',
 $resp    = $ua->request($res);
 $content = $resp->content;
 
-unless ( $resp->is_success ) {
+unless ( $resp->is_success && $content =~ /<img src="\/html\/images\/logo-esselungaacasa.jpg" alt="Attendere">/ ) {
     say "Non posso effettuare il login, skipping";
     say $content if $DEBUG;
     exit 1;
 }
-
 say "Login OK";
 my $cookies = $cookiejar->as_string;
 my $xsfr    = '';
