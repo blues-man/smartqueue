@@ -37,6 +37,6 @@ $ USERNAME=username PASSWORD=password EMAIL=email@test.com SMTP_SERVER=smtp.test
 ### OpenShift
 
 ```
-$ oc new-app https://github.com/blues-man/smartqueue.git --env USERNAME=user --env PASSWORD=pass SMTP_SERVER=smtp.test.com SMTP_USER=test SMTP_PASS=pass SMTP_PORT=587 SMTP_SERVER_SSL=1 EMAIL_FROM=info@test.it
+$ oc new-app https://github.com/blues-man/smartqueue.git --env USERNAME=user --env PASSWORD=pass --env SMTP_SERVER=smtp.test.com --env SMTP_USER=test --envSMTP_PASS=pass --env SMTP_PORT=587 --env SMTP_SERVER_SSL=1 --env EMAIL_FROM=info@test.it
 ```
 
