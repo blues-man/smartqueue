@@ -177,7 +177,8 @@ my $res     = $ua->get($url);
 my $content = '';
 
 unless ( $res->is_success ) {
-    say "Non posso raggiungere il sito esselunga.it, skipping". $res->content;
+    say "Non posso raggiungere il sito esselunga.it, skipping";
+    say $res->content if $VERBOSE;
     exit 1;
 
 }
@@ -204,7 +205,7 @@ if ( $content =~ /^X-CSRF-TOKEN:(.*)$/ ) {
 }
 else {
     say "Non posso estrapolare il token CSRF, skipping";
-    say $content if $DEBUG;
+    say $content if $VERBOSE;
     exit 1;
 }
 
@@ -232,7 +233,7 @@ $content = $resp->content;
 
 unless ( $resp->is_success && $content =~ /<img src="\/html\/images\/logo-esselungaacasa.jpg" alt="Attendere">/ ) {
     say "Non posso effettuare il login, skipping";
-    say $content if $DEBUG;
+    say $content if $VERBOSE;
     exit 1;
 }
 say "Login OK";
