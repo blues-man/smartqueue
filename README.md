@@ -35,10 +35,10 @@ $ USERNAME=username PASSWORD=password EMAIL=email@test.com SMTP_SERVER=smtp.test
 ```
 
 
-### Podman
+### Podman and Buildah
 
 ```
-$ buildah bud -t esselunga
+$ buildah bud -t esselunga .
 $ podman run -e USERNAME=username PASSWORD=password EMAIL=email@test.com SMTP_SERVER=smtp.test.com SMTP_USER=test SMTP_PASS=pass SMTP_PORT=587 SMTP_SERVER_SSL=1 EMAIL_FROM=info@test.it -ti localhost/esselunga
 ```
 
