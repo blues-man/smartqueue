@@ -37,7 +37,7 @@ $ USERNAME=username PASSWORD=password EMAIL=email@test.com SMTP_SERVER=smtp.test
 ### OpenShift
 
 ```
-$ oc new-app https://github.com/blues-man/smartqueue.git --env USERNAME=user --env PASSWORD=pass --env SMTP_SERVER=smtp.test.com --env SMTP_USER=test --envSMTP_PASS=pass --env SMTP_PORT=587 --env SMTP_SERVER_SSL=1 --env EMAIL_FROM=info@test.it
+$ oc new-app https://github.com/blues-man/smartqueue.git --env USERNAME=user --env PASSWORD=pass --env SMTP_SERVER=smtp.test.com --env SMTP_USER=test --env SMTP_PASS=pass --env SMTP_PORT=587 --env SMTP_SERVER_SSL=1 --env EMAIL_FROM=info@test.it --strategy=docker
 ```
 
 ### Kubernetes
@@ -50,7 +50,7 @@ kind: CronJob
 metadata:
   name: esselunga-slots-hourly
 spec:
-  schedule: "0 * * * *"
+  schedule: "@hourly"
   jobTemplate:
     spec:
       template:
@@ -59,21 +59,21 @@ spec:
           - name: smartqueue
             image: smartqueue:latest
             env:
-            - name: USERNAME
-              value: user
-            - name: PASSWORD
-              value: pass
-            - name: EMAIL
-              value: test@test.com
-            - name: SMTP_SERVER
-              value: smtp.test.com
-            - name: SMTP_USER
-              value: test
-            - name: SMTP_PASS
-              value: pass
-            - name: SMTP_PORT
-              value: 587
-            - name: EMAIL_FROM:
-              value: info@test.com
+              - name: USERNAME
+                value: user
+              - name: PASSWORD
+                value: pass
+              - name: EMAIL
+                value: test@test.com
+              - name: SMTP_SERVER
+                value: smtp.test.com
+              - name: SMTP_USER
+                value: test
+              - name: SMTP_PASS
+                value: pass
+              - name: SMTP_PORT
+                value: '587'
+              - name: EMAIL_FROM
+                value: info@test.com
           restartPolicy: Never
 ```

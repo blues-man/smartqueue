@@ -122,6 +122,14 @@ if ($ENV{USERNAME} && $ENV{PASSWORD}) {
     $email = $ENV{EMAIL};
     fill_smtp_settings();
   }
+  
+   if ($ENV{DEBUG}){
+    $DEBUG = $ENV{DEBUG};
+   }
+   
+   if ($ENV{VERBOSE}){
+    $VERBOSE = $ENV{VERBOSE};
+   }
 } else {
     getopt( 'upe', \%options );
 
