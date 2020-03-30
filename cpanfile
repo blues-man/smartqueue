@@ -1,4 +1,5 @@
 requires 'LWP::UserAgent';
+requires 'LWP::Protocol::https';
 requires 'HTTP::Request';
 requires 'HTTP::Cookies';
 requires 'HTML::Entities';
