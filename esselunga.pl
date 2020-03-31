@@ -67,7 +67,7 @@ sub fill_smtp_settings {
     }
 
     if ($ENV{SMTP_PASS}){
-        $smtp_pass = $ENV{SMTP_SERVER};
+        $smtp_pass = $ENV{SMTP_PASS};
     }
 
     if ($ENV{SMTP_PORT}){
