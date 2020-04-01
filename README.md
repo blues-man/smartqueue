@@ -42,12 +42,6 @@ $ buildah bud -t esselunga .
 $ podman run -e USERNAME=username PASSWORD=password EMAIL=email@test.com SMTP_SERVER=smtp.test.com SMTP_USER=test SMTP_PASS=pass SMTP_PORT=587 SMTP_SERVER_SSL=1 EMAIL_FROM=info@test.it -ti localhost/esselunga
 ```
 
-### OpenShift
-
-```
-$ oc new-app https://github.com/blues-man/smartqueue.git --env USERNAME=user --env PASSWORD=pass --env SMTP_SERVER=smtp.test.com --env SMTP_USER=test --env SMTP_PASS=pass --env SMTP_PORT=587 --env SMTP_SERVER_SSL=1 --env EMAIL_FROM=info@test.it --strategy=docker
-```
-
 ### Kubernetes
 
 #### CronJob
@@ -65,7 +59,7 @@ spec:
         spec:
           containers:
           - name: smartqueue
-            image: smartqueue:latest
+            image: quay.io/bluesman/smartqueue:latest
             env:
               - name: USERNAME
                 value: user
@@ -81,7 +75,47 @@ spec:
                 value: pass
               - name: SMTP_PORT
                 value: '587'
+              - name: SMTP_SERVER_SSL
+                value: '1'
               - name: EMAIL_FROM
                 value: info@test.com
           restartPolicy: Never
 ```
+
+```
+$ kubectl apply -f cronjob.yaml
+```
+### OpenShift
+
+```
+$ oc new-app https://github.com/blues-man/smartqueue.git --env USERNAME=user --env PASSWORD=pass --env SMTP_SERVER=smtp.test.com --env SMTP_USER=test --env SMTP_PASS=pass --env SMTP_PORT=587 --env SMTP_SERVER_SSL=1 --env EMAIL_FROM=info@test.it --strategy=docker
+```
+
+#### OpenShift Template
+
+Available for your project:
+```
+$ oc create -f smartqueue-template.yaml
+```
+
+Available globally
+
+```
+$ oc create -f smartqueue-template.yaml -n openshift
+```
+
+Use it from command line:
+
+```
+$ oc process smartqueue-template -n openshift -p WEBSITE_USERNAME=user -p WEBSITE_PASSWORD=pass -P CRONJOB_SCHEDULE="@hourly" -p SMTP_SERVER=smtp.test.com -p SMTP_USER=test -p SMTP_PASS=pass -p SMTP_PORT=587 -p SMTP_SERVER_SSL=1 -p EMAIL_FROM=info@test.it | oc create -f -
+```
+
+Use it from Developer Catalog:
+
+![Template search](/images/template1.png)
+
+![Template parameters](/images/template2.png)
+
+See it running!
+
+![OCP Screenshot](/images/template3.png)
