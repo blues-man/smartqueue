@@ -289,9 +289,8 @@ for my $hashref (@{$json}) {
         
         say "$status - $start_time - $end_time $s_status" if $VERBOSE;
         
-    if (   $status ne 'ESAURITA'
-        && $status ne 'INIBITA'
-        && $s_status ne 'DISABLED' )
+    if (   $status eq 'QUASI_ESAURITA'
+        && $status eq 'DISPONIBILE')
     {
 
         my $start_time_date = '';
