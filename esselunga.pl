@@ -41,7 +41,7 @@ use DBI;
 
 
 
-my $DEBUG = 1;
+my $DEBUG = 0;
 my $VERBOSE = 0;
 my $smtp_server_ssl = 1;
 my $smtp_server = '';
@@ -55,6 +55,10 @@ my %options = ();
 my $username = '';
 my $password = '';
 my $email = '';
+
+my $login = 0;
+
+
 
 sub fill_smtp_settings {
 
@@ -113,6 +117,8 @@ sub send_mail {
     say "Email Inviata!";
 }
 
+
+
 if ($ENV{USERNAME} && $ENV{PASSWORD}) {
 
   $username = $ENV{USERNAME};
@@ -142,6 +148,7 @@ if ($ENV{USERNAME} && $ENV{PASSWORD}) {
     
 }
 
+
 if ($ENV{DEBUG}){
     $DEBUG = $ENV{DEBUG};
 }
@@ -149,6 +156,17 @@ if ($ENV{DEBUG}){
 if ($ENV{VERBOSE}){
     $VERBOSE = $ENV{VERBOSE};
 }
+
+
+my $ua        = LWP::UserAgent->new();
+my $cookiejar = HTTP::Cookies->new(
+  file => "${username}_cookies.txt",
+  autosave => 1,
+  ignore_discard => 1
+);
+$ua->cookie_jar($cookiejar);
+$ua->agent('Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.; Trident/5.0)');
+
 
 my $dbfile = "esselunga.sqlite";
 my $dbh =
@@ -171,81 +189,87 @@ if($rv < 0) {
     say "Database structure Ready";
 }
 
-
-my $url =
+sub homepage {
+    my $url =
 'https://www.esselunga.it/area-utenti/applicationCheck?appName=esselungaEcommerce&daru=https%3A%2F%2Fwww.esselungaacasa.it%3A443%2Fecommerce%2Fnav%2Fauth%2Fsupermercato%2Fhome.html%3F&loginType=light';
+    my $res     = $ua->get($url);
+    my $content = '';
+
+    unless ( $res->is_success ) {
+        say "Non posso raggiungere il sito esselunga.it, skipping";
+        say $res->content if $VERBOSE;
+        exit 1;
+
+    }
+
+    say "Homepage OK";
+    $content = $res->content if $DEBUG;
+
+}
 
 
-my $ua        = LWP::UserAgent->new();
-my $cookiejar = HTTP::Cookies->new();
-$ua->cookie_jar($cookiejar);
-$ua->agent('Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.; Trident/5.0)');
+sub login {
 
-my $res     = $ua->get($url);
+    homepage();
+
+    my $csrf = '';
+
+    $ua->default_header( 'Referer' =>
+    'https://www.esselunga.it/area-utenti/applicationCheck?appName=esselungaEcommerce&daru=https%3A%2F%2Fwww.esselungaacasa.it%3A443%2Fecommerce%2Fnav%2Fauth%2Fsupermercato%2Fhome.html%3F&loginType=light'
+    );
+    $ua->default_header( 'FETCH-CSRF-TOKEN' => '1' );
+    push @{ $ua->requests_redirectable }, 'POST';
+
+    my $res = POST 'https://www.esselunga.it/area-utenti/csrfjs';
+
+    my $resp = $ua->request($res);
+    my $content = $resp->content;
+
+    if ( $content =~ /^X-CSRF-TOKEN:(.*)$/ ) {
+        $csrf = $1;
+    }
+    else {
+        say "Non posso estrapolare il token CSRF, skipping";
+        say $content if $VERBOSE;
+        exit 1;
+    }
+
+    say "Token: $csrf" if $DEBUG;
+
+    $ua->default_header( 'Referer' =>
+    'https://www.esselunga.it/area-utenti/applicationCheck?appName=esselungaEcommerce&daru=https%3A%2F%2Fwww.esselungaacasa.it%3A443%2Fecommerce%2Fnav%2Fauth%2Fsupermercato%2Fhome.html%3F&loginType=light'
+    );
+
+    $res = POST 'https://www.esselunga.it/area-utenti/loginExt',
+    [
+        username => $username,
+        password => $password,
+        daru =>
+    'https://www.esselungaacasa.it:443/ecommerce/nav/auth/supermercato/home.html',
+        dare =>
+    'https://www.esselunga.it/area-utenti/applicationCheck?appName=esselungaEcommerce&daru=https%3A%2F%2Fwww.esselungaacasa.it%3A443%2Fecommerce%2Fnav%2Fauth%2Fsupermercato%2Fhome.html%3F&loginType=light',
+        appName        => 'esselungaEcommerce',
+        promo          => '',
+        'X-CSRF-TOKEN' => $csrf
+    ];
+
+    $resp    = $ua->request($res);
+    $content = $resp->content;
+
+    unless ( $resp->is_success && $content =~ /<img src="\/html\/images\/logo-esselungaacasa.jpg" alt="Attendere">/ ) {
+        say "Non posso effettuare il login, skipping";
+        say $content if $VERBOSE;
+        exit 1;
+    }
+    $login = 1;
+    say "Login OK";
+
+}
+
+
+
+my $res     = '';
 my $content = '';
-
-unless ( $res->is_success ) {
-    say "Non posso raggiungere il sito esselunga.it, skipping";
-    say $res->content if $VERBOSE;
-    exit 1;
-
-}
-
-say "Homepage OK";
-
-$content = $res->content if $DEBUG;
-
-my $csrf = '';
-
-$ua->default_header( 'Referer' =>
-'https://www.esselunga.it/area-utenti/applicationCheck?appName=esselungaEcommerce&daru=https%3A%2F%2Fwww.esselungaacasa.it%3A443%2Fecommerce%2Fnav%2Fauth%2Fsupermercato%2Fhome.html%3F&loginType=light'
-);
-$ua->default_header( 'FETCH-CSRF-TOKEN' => '1' );
-push @{ $ua->requests_redirectable }, 'POST';
-
-$res = POST 'https://www.esselunga.it/area-utenti/csrfjs';
-
-my $resp = $ua->request($res);
-$content = $resp->content;
-
-if ( $content =~ /^X-CSRF-TOKEN:(.*)$/ ) {
-    $csrf = $1;
-}
-else {
-    say "Non posso estrapolare il token CSRF, skipping";
-    say $content if $VERBOSE;
-    exit 1;
-}
-
-say "Token: $csrf" if $DEBUG;
-
-$ua->default_header( 'Referer' =>
-'https://www.esselunga.it/area-utenti/applicationCheck?appName=esselungaEcommerce&daru=https%3A%2F%2Fwww.esselungaacasa.it%3A443%2Fecommerce%2Fnav%2Fauth%2Fsupermercato%2Fhome.html%3F&loginType=light'
-);
-
-$res = POST 'https://www.esselunga.it/area-utenti/loginExt',
-  [
-    username => $username,
-    password => $password,
-    daru =>
-'https://www.esselungaacasa.it:443/ecommerce/nav/auth/supermercato/home.html',
-    dare =>
-'https://www.esselunga.it/area-utenti/applicationCheck?appName=esselungaEcommerce&daru=https%3A%2F%2Fwww.esselungaacasa.it%3A443%2Fecommerce%2Fnav%2Fauth%2Fsupermercato%2Fhome.html%3F&loginType=light',
-    appName        => 'esselungaEcommerce',
-    promo          => '',
-    'X-CSRF-TOKEN' => $csrf
-  ];
-
-$resp    = $ua->request($res);
-$content = $resp->content;
-
-unless ( $resp->is_success && $content =~ /<img src="\/html\/images\/logo-esselungaacasa.jpg" alt="Attendere">/ ) {
-    say "Non posso effettuare il login, skipping";
-    say $content if $VERBOSE;
-    exit 1;
-}
-say "Login OK";
-
 my $xsfr    = '';
 
 $cookiejar ->scan(sub { 
@@ -256,9 +280,20 @@ $cookiejar ->scan(sub {
 
 
 if ($xsfr eq ''){
-    say "Non posso estrarre il cookie XSFR";
-    exit 1;
+    if (!$login) {
+        login();
+        $cookiejar ->scan(sub { 
+            if ($_[1] eq 'XSRF-ECOM-TOKEN') { 
+                $xsfr = $_[2]; 
+            }; 
+        });
+    } else {
+        say "Non posso estrarre il cookie XSFR";
+        exit 1;
+    }
+
 }
+
 
 $ua->default_header( 'Content-Type' => 'application/json' );
 $ua->default_header( 'X-XSRF-TOKEN' => $xsfr );
@@ -270,6 +305,7 @@ $content = $res->content;
 unless ( $res->is_success ) {
     say "Non posso verificare gli slot, skipping";
     say $content if $DEBUG;
+    $cookiejar->clear;
     exit 1;
 }
 
