@@ -44,6 +44,8 @@ use DBI;
 my $DEBUG = 1;
 my $VERBOSE = 0;
 my $DATAPATH = '';
+my $BOOKSLOT = 0;
+
 my $smtp_server_ssl = 1;
 my $smtp_server = '';
 my $smtp_user = '';
@@ -59,7 +61,7 @@ my $email = '';
 
 my $login = 0;
 
-my %slots;
+my @slots;
 
 
 
@@ -131,6 +133,9 @@ if ($ENV{USERNAME} && $ENV{PASSWORD}) {
     $email = $ENV{EMAIL};
     fill_smtp_settings();
   }
+  if ($ENV{BOOKSLOT}){
+    $BOOKSLOT = $ENV{BOOKSLOT};
+  }
 } else {
     getopt( 'u:p:e:b', \%options );
 
@@ -150,6 +155,9 @@ if ($ENV{USERNAME} && $ENV{PASSWORD}) {
         fill_smtp_settings();
     }
     
+    if ($options{b}){
+        $BOOKSLOT = 1;
+    }
 }
 
 
@@ -167,7 +175,6 @@ if ($ENV{DATAPATH}){
         $DATAPATH = "$DATAPATH/";
     }
 }
-
 
 my $ua        = LWP::UserAgent->new();
 my $cookiejar = HTTP::Cookies->new(
@@ -280,13 +287,16 @@ sub login {
 
 
 sub bookslot {
+    my %json = shift; 
     my $url = 'https://www.esselungaacasa.it/ecommerce/resources/auth/slot/reservation';
     $ua->default_header( 'Content-Type' => 'application/json' );
-    my $res = $ua->post($url, Content => encode_json(\%slots));
+    my $res = $ua->post($url, Content => encode_json(\%json));
     if ( $res->is_success ) {
-        say "Slot " . $slots{startTime} . " prenotato!";
+        say "Slot " . $json{startTime} . " prenotato!";
+        return 1;
     } else {
-        say "Errore nella prenotazione slot " . $slots{startTime};
+        say "Errore nella prenotazione slot " . $json{startTime};
+        return 0;
     }
 }
 
@@ -390,8 +400,10 @@ if ($ok) {
     my $message = '';
     while(($start_time, $end_time, $text) = $sth->fetchrow()){
         $message .= "$text\n";
-        $slots{startTime} = $start_time;
-        $slots{endTime} = $end_time;
+        my %slotsref;
+        $slotsref{startTime} = $start_time;
+        $slotsref{endTime} = $end_time;
+        push @slots, %slotsref;
     }
     
     my $send_text = "Ciao,\nSono liberi degli slot:\n\n" . $message . "\nBuona spesa su https://www.esselungaacasa.it/ !\n";
@@ -404,7 +416,13 @@ if ($ok) {
             $sth->execute() or die $DBI::errstr;  
     }
 
-    bookslot() if defined $options{b};
+    if ($BOOKSLOT) {
+        my $booked = 0;
+        for (my $i=0; $i < scalar(@slots) && !$booked; $i++) {
+            my $hashref = $slots[$i];
+            $booked = bookslot($hashref);
+        }
+    }
 
 } else {
     say "Nessuno nuovo slot disponibile, riprovare";
