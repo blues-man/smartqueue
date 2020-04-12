@@ -59,6 +59,9 @@ my $email = '';
 
 my $login = 0;
 
+my %slots;
+
+
 
 
 sub fill_smtp_settings {
@@ -92,7 +95,7 @@ sub fill_smtp_settings {
 }
 
 sub send_mail {
-    my ($emails,$body) = @_;
+    my ($emails, $subject, $body) = @_;
     my @emails = split(/,/, $emails);
     my $to = $emails[0];
     my $cc = '';
@@ -100,7 +103,6 @@ sub send_mail {
         $cc.="$emails[$i],";
     }
     my $from = $email_from;
-    my $subject = 'Slot disponibili';
     my $message = $body;
     
     
@@ -130,12 +132,13 @@ if ($ENV{USERNAME} && $ENV{PASSWORD}) {
     fill_smtp_settings();
   }
 } else {
-    getopt( 'upe', \%options );
+    getopt( 'u:p:e:b', \%options );
 
     if ( !$options{u} || !$options{p} ) {
         say "Opzioni: -u USERNAME -p PASSWORD [-e EMAIL]\n";
         say "Esempio: esselunga.pl -u esempio\@gmail.com -p password";
         say "Esempio: esselunga.pl -u esempio\@gmail.com -p password -e esempio\@gmail.com,altro\@gmail.com";
+        say "Esempio: esselunga.pl -u esempio\@gmail.com -p password -e esempio\@gmail.com,altro\@gmail.com -b";
         say "Esempio: SMTP_SERVER=smtp.test.com SMTP_USER=test SMTP_PASS=pass SMTP_PORT=587 SMTP_SERVER_SSL=1 EMAIL_FROM=info\@test.it esselunga.pl -u esempio\@gmail.com -p password -e esempio\@gmail.com,altro\@gmail.com";
         exit 1;
     }
@@ -186,6 +189,7 @@ or die $DBI::errstr;
 my $stmt = qq(CREATE TABLE IF NOT EXISTS slots
 (   username      TEXT NOT NULL,
     start_time    DATETIME NOT NULL,
+    end_time      DATETIME NOT NULL,
     email_sent    INTEGER     NOT NULL,
     text          TEXT,
     PRIMARY KEY (username, start_time)););
@@ -275,6 +279,17 @@ sub login {
 }
 
 
+sub bookslot {
+    my $url = 'https://www.esselungaacasa.it/ecommerce/resources/auth/slot/reservation';
+    $ua->default_header( 'Content-Type' => 'application/json' );
+    my $res = $ua->post($url, Content => encode_json(\%slots));
+    if ( $res->is_success ) {
+        say "Slot " . $slots{startTime} . " prenotato!";
+    } else {
+        say "Errore nella prenotazione slot " . $slots{startTime};
+    }
+}
+
 
 my $res     = '';
 my $content = '';
@@ -356,8 +371,8 @@ for my $hashref (@{$json}) {
         say $slots;
         $ok = 1;
 
-        my $sth = $dbh->prepare("INSERT OR IGNORE INTO slots(start_time, username, email_sent, text) VALUES(?,?,?,?)");
-        $sth->execute($start_time, $username, 0, $slots) or die $DBI::errstr;
+        my $sth = $dbh->prepare("INSERT OR IGNORE INTO slots(start_time, end_time, username, email_sent, text) VALUES(?,?,?,?,?)");
+        $sth->execute($start_time, $end_time, $username, 0, $slots) or die $DBI::errstr;
     }
 
 }
@@ -366,27 +381,30 @@ say "Check slot completo";
 if ($ok) {
     say "BINGO!";
     
-    my $sth = $dbh->prepare("SELECT text FROM slots WHERE email_sent = 0 AND username = '$username'")
+    my $sth = $dbh->prepare("SELECT start_time, end_time, text FROM slots WHERE email_sent = 0 AND username = '$username'")
             or die "prepare statement failed: $dbh->errstr()";
     
     $sth->execute() or die "execution failed: $dbh->errstr()"; 
  
-    my $text;
+    my ($start_time, $end_time, $text);
     my $message = '';
-    while($text = $sth->fetchrow()){
-        $message .= "$text\n";                   
+    while(($start_time, $end_time, $text) = $sth->fetchrow()){
+        $message .= "$text\n";
+        $slots{startTime} = $start_time;
+        $slots{endTime} = $end_time;
     }
     
     my $send_text = "Ciao,\nSono liberi degli slot:\n\n" . $message . "\nBuona spesa su https://www.esselungaacasa.it/ !\n";
     
     
     if ($email ne '' && $message ne ''){
-            send_mail($email, $send_text);
+            send_mail($email, "Slot disponibili", $send_text);
             
             $sth = $dbh->prepare("UPDATE slots set email_sent = 1 WHERE start_time IN (SELECT start_time FROM slots WHERE email_sent = 0 AND username = '$username');");
-            $sth->execute() or die $DBI::errstr;
-            
+            $sth->execute() or die $DBI::errstr;  
     }
+
+    bookslot() if defined $options{b};
 
 } else {
     say "Nessuno nuovo slot disponibile, riprovare";
