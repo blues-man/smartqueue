@@ -85,6 +85,65 @@ spec:
 ```
 $ kubectl apply -f cronjob.yaml
 ```
+
+### CronJob using Secret and PersistentVolumeClaim
+
+For faster checks storing cookies and DB on a PV:
+
+```
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: smartqueue-slots
+spec:
+  schedule: '*/5 * * * *'
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 10
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          volumes:
+            - name: datapath
+              persistentVolumeClaim:
+                claimName: smartqueue-pvc
+          containers:
+          - name: smartqueue
+            image: quay.io/bluesman/smartqueue:latest
+            volumeMounts:
+              - name: datapath
+                mountPath: /data
+            env:
+              - name: DATAPATH
+                value: /data
+              - name: USERNAME
+                value: 'user'
+              - name: PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: smartqueue-secret
+                    key: website-password
+              - name: EMAIL
+                value: 'test@test.com'
+              - name: SMTP_SERVER
+                value: 'mail.test.com'
+              - name: SMTP_SERVER_SSL
+                value: '1'
+              - name: SMTP_USER
+                value: 'user'
+              - name: SMTP_PASS
+                valueFrom:
+                  secretKeyRef:
+                    name: smartqueue-secret
+                    key: smtp-password
+              - name: SMTP_PORT
+                value: '587'
+              - name: EMAIL_FROM
+                value: 'send@test.com'
+          restartPolicy: Never
+
+```
+
 ### OpenShift
 
 ```
@@ -108,6 +167,13 @@ Use it from command line:
 
 ```
 $ oc process smartqueue-template -n openshift -p WEBSITE_USERNAME=user -p WEBSITE_PASSWORD=pass -P CRONJOB_SCHEDULE="@hourly" -p SMTP_SERVER=smtp.test.com -p SMTP_USER=test -p SMTP_PASS=pass -p SMTP_PORT=587 -p SMTP_SERVER_SSL=1 -p EMAIL_FROM=info@test.it | oc create -f -
+```
+#### OpenShift Template Persistent
+
+Save cookies and DB for faster checks, creates a PVC with parametrized size
+
+```
+$ oc create -f smartqueue-template-persistent.yaml
 ```
 
 Use it from Developer Catalog:

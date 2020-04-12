@@ -42,7 +42,7 @@ objects:
                   claimName: smartqueue-pvc
             containers:
             - name: smartqueue
-              image: quay.io/bluesman/smartqueue:cookie
+              image: quay.io/bluesman/smartqueue:latest
               volumeMounts:
                 - name: datapath
                   mountPath: /data
