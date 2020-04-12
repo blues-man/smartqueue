@@ -43,6 +43,7 @@ use DBI;
 
 my $DEBUG = 0;
 my $VERBOSE = 0;
+my $DATAPATH = '';
 my $smtp_server_ssl = 1;
 my $smtp_server = '';
 my $smtp_user = '';
@@ -157,10 +158,17 @@ if ($ENV{VERBOSE}){
     $VERBOSE = $ENV{VERBOSE};
 }
 
+if ($ENV{DATAPATH}){
+    $DATAPATH = $ENV{DATAPATH};
+    if ($DATAPATH !~ m/\/$/){
+        $DATAPATH = "$DATAPATH/";
+    }
+}
+
 
 my $ua        = LWP::UserAgent->new();
 my $cookiejar = HTTP::Cookies->new(
-  file => "${username}_cookies.txt",
+  file => $DATAPATH . "${username}_cookies.txt",
   autosave => 1,
   ignore_discard => 1
 );
@@ -168,7 +176,7 @@ $ua->cookie_jar($cookiejar);
 $ua->agent('Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.; Trident/5.0)');
 
 
-my $dbfile = "esselunga.sqlite";
+my $dbfile = $DATAPATH . "esselunga.sqlite";
 my $dbh =
     DBI->connect( "dbi:SQLite:dbname=$dbfile", "", "",
     { RaiseError => 1 } )
@@ -384,5 +392,3 @@ if ($ok) {
 } else {
     say "Nessuno nuovo slot disponibile, riprovare";
 }
-
-

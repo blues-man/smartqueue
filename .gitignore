@@ -1,2 +1,3 @@
 *.sqlite
 .vstags
+*_cookies.txt
