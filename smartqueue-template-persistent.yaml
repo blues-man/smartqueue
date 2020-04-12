@@ -1,0 +1,131 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: smartqueue-template-persistent
+  annotations:
+    description: "Smartqueue, free slots checker on Esselunga.it"
+    iconClass: "icon-perl"
+    tags: "bot,smartqueue,esselunga"
+objects:
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: smartqueue-pvc
+  spec:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: '${VOLUME_CAPACITY}'
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: 'smartqueue-secret'
+  stringData:
+    website-password: '${WEBSITE_PASSWORD}'
+    smtp-password: '${SMTP_PASSWORD}'
+- apiVersion: batch/v1beta1
+  kind: CronJob
+  metadata:
+    name: smartqueue-slots
+  spec:
+    schedule: '${CRONJOB_SCHEDULE}'
+    concurrencyPolicy: Forbid
+    startingDeadlineSeconds: 10
+    jobTemplate:
+      spec:
+        template:
+          spec:
+            volumes:
+              - name: datapath
+                persistentVolumeClaim:
+                  claimName: smartqueue-pvc
+            containers:
+            - name: smartqueue
+              image: quay.io/bluesman/smartqueue:cookie
+              volumeMounts:
+                - name: datapath
+                  mountPath: /data
+              env:
+                - name: DATAPATH
+                  value: /data
+                - name: USERNAME
+                  value: '${WEBSITE_USERNAME}'
+                - name: PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: smartqueue-secret
+                      key: website-password
+                - name: EMAIL
+                  value: '${EMAILS}'
+                - name: SMTP_SERVER
+                  value: '${SMTP_SERVER}'
+                - name: SMTP_SERVER_SSL
+                  value: '${SMTP_SERVER_SSL}'
+                - name: SMTP_USER
+                  value: '${SMTP_USER}'
+                - name: SMTP_PASS
+                  valueFrom:
+                    secretKeyRef:
+                      name: smartqueue-secret
+                      key: smtp-password
+                - name: SMTP_PORT
+                  value: '${SMTP_PORT}'
+                - name: EMAIL_FROM
+                  value: '${EMAIL_FROM}'
+            restartPolicy: Never
+parameters:
+- name: WEBSITE_USERNAME
+  displayName: Website user
+  description: User used for Esselunga.it
+  required: true
+- description: Password used for Esselunga.it
+  displayName: Website password
+  from: '[a-zA-Z0-9]'
+  name: WEBSITE_PASSWORD
+  required: true
+- name: CRONJOB_SCHEDULE
+  displayName: Crontab schedule
+  description: Use Crontab syntax to setup CronJob Schedule
+  required: true
+  value: '@hourly'
+- name: EMAILS
+  displayName: Email used for notifications
+  description: Email where to send notifications for free slots available, comma separated for multiple in BCC  
+  required: true
+- name: EMAIL_FROM
+  displayName: Email used to send notifications
+  description: Email used to send notifications
+  required: true
+- name: SMTP_SERVER
+  displayName: SMTP server 
+  description: SMTP server for sending email
+  required: true
+- name: SMTP_USER
+  displayName: SMTP server user
+  description: SMTP server user for sending email
+  required: true
+- name: SMTP_PASS
+  displayName: SMTP server pass
+  description: SMTP server pass for sending email
+  from: '[a-zA-Z0-9]'
+  required: true
+- name: SMTP_PORT
+  displayName: SMTP server port
+  description: SMTP server port for sending email
+  from: '[0-9]{5}'
+  value: '587'
+  required: true
+- name: SMTP_SERVER_SSL
+  displayName: SMTP server SSL/TLS flag
+  description: Enable/Disable SSL/TLS for SMTP Server 
+  from: '[0-1]{1}'
+  value : '1'
+  required: true
+- name: VOLUME_CAPACITY
+  displayName: Volume Capacity
+  description: 'Volume space available for data, e.g. 512Mi, 2Gi.'
+  value: 1Gi
+  required: true
+labels:
+  template: smartqueue-template-persistent

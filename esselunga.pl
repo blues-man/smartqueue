@@ -41,7 +41,7 @@ use DBI;
 
 
 
-my $DEBUG = 0;
+my $DEBUG = 1;
 my $VERBOSE = 0;
 my $DATAPATH = '';
 my $smtp_server_ssl = 1;
