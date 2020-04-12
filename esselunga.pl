@@ -380,12 +380,11 @@ if ($ok) {
     my $send_text = "Ciao,\nSono liberi degli slot:\n\n" . $message . "\nBuona spesa su https://www.esselungaacasa.it/ !\n";
     
     
-    if ($email ne ''){
+    if ($email ne '' && $message ne ''){
             send_mail($email, $send_text);
             
             $sth = $dbh->prepare("UPDATE slots set email_sent = 1 WHERE start_time IN (SELECT start_time FROM slots WHERE email_sent = 0 AND username = '$username');");
             $sth->execute() or die $DBI::errstr;
-            say "Inviata";
             
     }
 
