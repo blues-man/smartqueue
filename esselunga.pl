@@ -38,7 +38,7 @@ use Authen::SASL;
 use JSON::MaybeXS;
 use DBI;
 
-
+use Data::Dumper;
 
 
 my $DEBUG = 1;
@@ -137,7 +137,7 @@ if ($ENV{USERNAME} && $ENV{PASSWORD}) {
     $BOOKSLOT = $ENV{BOOKSLOT};
   }
 } else {
-    getopt( 'u:p:e:b', \%options );
+    getopt( 'bu:p:e:', \%options );
 
     if ( !$options{u} || !$options{p} ) {
         say "Opzioni: -u USERNAME -p PASSWORD [-e EMAIL]\n";
@@ -287,15 +287,16 @@ sub login {
 
 
 sub bookslot {
-    my %json = shift; 
+    my $json = shift;
     my $url = 'https://www.esselungaacasa.it/ecommerce/resources/auth/slot/reservation';
     $ua->default_header( 'Content-Type' => 'application/json' );
-    my $res = $ua->post($url, Content => encode_json(\%json));
+    my $res = $ua->post($url, Content => encode_json($json));
     if ( $res->is_success ) {
-        say "Slot " . $json{startTime} . " prenotato!";
+        say "Slot " . $json->{startTime} . " prenotato!";
+        send_mail($email, "Slot prenotato!", "Slot ". $json->{startTime} . " - " . $json->{endTime}) if $email ne '';
         return 1;
     } else {
-        say "Errore nella prenotazione slot " . $json{startTime};
+        say "Errore nella prenotazione slot " . $json->{startTime};
         return 0;
     }
 }
@@ -327,6 +328,7 @@ if ($xsfr eq ''){
 
 }
 
+    return 1;
 
 $ua->default_header( 'Content-Type' => 'application/json' );
 $ua->default_header( 'X-XSRF-TOKEN' => $xsfr );
@@ -403,7 +405,8 @@ if ($ok) {
         my %slotsref;
         $slotsref{startTime} = $start_time;
         $slotsref{endTime} = $end_time;
-        push @slots, %slotsref;
+
+        push @slots, \%slotsref;
     }
     
     my $send_text = "Ciao,\nSono liberi degli slot:\n\n" . $message . "\nBuona spesa su https://www.esselungaacasa.it/ !\n";
@@ -417,13 +420,10 @@ if ($ok) {
     }
 
     if ($BOOKSLOT) {
-        my $booked = 0;
-        for (my $i=0; $i < scalar(@slots) && !$booked; $i++) {
-            my $hashref = $slots[$i];
-            $booked = bookslot($hashref);
+        foreach my $hashref (@{slots}){            
+            last if bookslot($hashref);
         }
     }
-
 } else {
     say "Nessuno nuovo slot disponibile, riprovare";
 }
