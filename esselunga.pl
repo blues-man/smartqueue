@@ -133,7 +133,7 @@ if ($ENV{USERNAME} && $ENV{PASSWORD}) {
     $BOOKSLOT = $ENV{BOOKSLOT};
   }
 } else {
-    getopt( 'b:u:p:e:', \%options );
+    getopts( 'bu:p:e:', \%options );
 
     if ( !$options{u} || !$options{p} ) {
         say "Opzioni: -u USERNAME -p PASSWORD [-e EMAIL]\n";
