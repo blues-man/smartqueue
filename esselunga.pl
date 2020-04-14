@@ -98,13 +98,8 @@ sub fill_smtp_settings {
 }
 
 sub send_mail {
-    my ($emails, $subject, $body) = @_;
-    my @emails = split(/,/, $emails);
-    my $to = $emails[0];
-    my $cc = '';
-    for (my $i = 1; $i < scalar(@emails); $i++){ 
-        $cc.="$emails[$i],";
-    }
+    my ($to, $cc, $subject, $body) = @_;
+
     my $from = $email_from;
     my $message = $body;
     
@@ -410,9 +405,16 @@ if ($ok) {
     }
     
     my $send_text = "Ciao,\nSono liberi degli slot:\n\n" . $message . "\nBuona spesa su https://www.esselungaacasa.it/ !\n";
+
+    my @emails = split(/,/, $email);
+    my $to = $emails[0];
+    my $cc = '';
+    for (my $i = 1; $i < scalar(@emails); $i++){ 
+        $cc.="$emails[$i],";
+    }
     
     if ($email ne '' && $message ne ''){
-            send_mail($email, "Slot disponibili", $send_text);
+            send_mail($to, $cc, "Slot disponibili", $send_text);
             
             $sth = $dbh->prepare("UPDATE slots set email_sent = 1 WHERE start_time IN (SELECT start_time FROM slots WHERE email_sent = 0 AND slot_booked = 0 AND username = '$username');");
             $sth->execute() or die $DBI::errstr;  
@@ -420,11 +422,24 @@ if ($ok) {
 
     if ($BOOKSLOT) {
         foreach my $hashref (@{slots}){            
-            if ($message ne '' && bookslot($hashref)){
-                    $sth = $dbh->prepare("UPDATE slots set slot_booked = 1 WHERE start_time IN (SELECT start_time FROM slots WHERE email_sent = 0 AND slot_booked = 0 AND username = '$username');");
-                    $sth->execute() or die $DBI::errstr;
-                    send_mail($email, "Slot prenotato!", "Slot ". $hashref->{startTime} . " - " . $hashref->{endTime}) if $email ne '';
-                    last;
+            if ($message ne ''){
+                    my $sth = $dbh->prepare("SELECT start_time  FROM slots WHERE slot_booked = 1 AND username = '$username'") or die "prepare statement failed: $dbh->errstr()";
+                    $sth->execute() or die "execution failed: $dbh->errstr()"; 
+
+                    my $start_time;
+                    my $book = 1;
+                    while(($start_time = $sth->fetchrow())){
+                        my $dt1 = system("date -d " . $hashref->{startTime} . " +%s") ;
+                        my $dt2 = system("date -d " . $start_time . " +%s") ;
+
+                        $dt1 > $dt2 ? $book = 0 : $book = 1;
+                    }
+                    if ($book && bookslot($hashref)){
+                        $sth = $dbh->prepare("UPDATE slots set slot_booked = 1 WHERE start_time = " . $hashref->{startTime} . " AND username = '$username');");
+                        $sth->execute() or die $DBI::errstr;
+                        send_mail($to, '', "Slot prenotato!", "Slot ". $hashref->{startTime} . " - " . $hashref->{endTime}) if $email ne '';
+                        last;
+                    }
             }
         }
     }
