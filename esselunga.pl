@@ -136,7 +136,7 @@ if ($ENV{USERNAME} && $ENV{PASSWORD}) {
     getopts( 'bu:p:e:', \%options );
 
     if ( !$options{u} || !$options{p} ) {
-        say "Opzioni: -u USERNAME -p PASSWORD [-e EMAIL]\n";
+        say "Opzioni: -u USERNAME -p PASSWORD [-e EMAIL] [-b]\n";
         say "Esempio: esselunga.pl -u esempio\@gmail.com -p password";
         say "Esempio: esselunga.pl -u esempio\@gmail.com -p password -e esempio\@gmail.com,altro\@gmail.com";
         say "Esempio: esselunga.pl -u esempio\@gmail.com -p password -e esempio\@gmail.com,altro\@gmail.com -b";
