@@ -381,8 +381,8 @@ for my $hashref (@{$json}) {
         say $slots;
         $ok = 1;
 
-        my $sth = $dbh->prepare("INSERT OR IGNORE INTO slots(start_time, end_time, username, email_sent, text) VALUES(?,?,?,?,?)");
-        $sth->execute($start_time, $end_time, $username, 0, $slots) or die $DBI::errstr;
+        my $sth = $dbh->prepare("INSERT OR IGNORE INTO slots(start_time, end_time, username, email_sent, slot_booked, text) VALUES(?,?,?,?,?,?)");
+        $sth->execute($start_time, $end_time, $username, 0, 0, $slots) or die $DBI::errstr;
     }
 
 }
