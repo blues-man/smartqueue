@@ -388,7 +388,7 @@ say "Check slot completo";
 if ($ok) {
     say "BINGO!";
     
-    my $sth = $dbh->prepare("SELECT start_time, end_time, text FROM slots WHERE email_sent = 0 AND slot_booked = 0 AND username = '$username'")
+    my $sth = $dbh->prepare("SELECT start_time, end_time, text FROM slots WHERE email_sent = 0 AND username = '$username'")
             or die "prepare statement failed: $dbh->errstr()";
     
     $sth->execute() or die "execution failed: $dbh->errstr()"; 
@@ -429,13 +429,15 @@ if ($ok) {
                     my $start_time;
                     my $book = 1;
                     while(($start_time = $sth->fetchrow())){
-                        my $dt1 = system("date -d " . $hashref->{startTime} . " +%s") ;
-                        my $dt2 = system("date -d " . $start_time . " +%s") ;
+                        my $dt1 = `date -d $hashref->{startTime} +%s` ;
+                        $dt1 =~ s/\n//g;
+                        my $dt2 = `date -d $start_time +%s` ;
+                        $dt2 =~ s/\n//g;
 
                         $dt1 > $dt2 ? $book = 0 : $book = 1;
                     }
                     if ($book && bookslot($hashref)){
-                        $sth = $dbh->prepare("UPDATE slots set slot_booked = 1 WHERE start_time = " . $hashref->{startTime} . " AND username = '$username');");
+                        $sth = $dbh->prepare("UPDATE slots set slot_booked = 1 WHERE start_time = '$hashref->{startTime}' AND username = '$username';");
                         $sth->execute() or die $DBI::errstr;
                         send_mail($to, '', "Slot prenotato!", "Slot ". $hashref->{startTime} . " - " . $hashref->{endTime}) if $email ne '';
                         last;
