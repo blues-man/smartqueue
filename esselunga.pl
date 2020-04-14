@@ -41,6 +41,7 @@ use DBI;
 use Data::Dumper;
 
 
+
 my $DEBUG = 1;
 my $VERBOSE = 0;
 my $DATAPATH = '';
@@ -137,7 +138,7 @@ if ($ENV{USERNAME} && $ENV{PASSWORD}) {
     $BOOKSLOT = $ENV{BOOKSLOT};
   }
 } else {
-    getopt( 'bu:p:e:', \%options );
+    getopt( 'b:u:p:e:', \%options );
 
     if ( !$options{u} || !$options{p} ) {
         say "Opzioni: -u USERNAME -p PASSWORD [-e EMAIL]\n";
@@ -197,6 +198,7 @@ my $stmt = qq(CREATE TABLE IF NOT EXISTS slots
 (   username      TEXT NOT NULL,
     start_time    DATETIME NOT NULL,
     end_time      DATETIME NOT NULL,
+    insert_time   DATETIME NOT NULL DEFAULT (DATETIME('now')),
     email_sent    INTEGER  NOT NULL DEFAULT 0,
     slot_booked   INTEGER  NOT NULL DEFAULT 0,
     text          TEXT,
@@ -409,7 +411,6 @@ if ($ok) {
     
     my $send_text = "Ciao,\nSono liberi degli slot:\n\n" . $message . "\nBuona spesa su https://www.esselungaacasa.it/ !\n";
     
-    
     if ($email ne '' && $message ne ''){
             send_mail($email, "Slot disponibili", $send_text);
             
@@ -419,10 +420,11 @@ if ($ok) {
 
     if ($BOOKSLOT) {
         foreach my $hashref (@{slots}){            
-            if (bookslot($hashref)){
+            if ($message ne '' && bookslot($hashref)){
                     $sth = $dbh->prepare("UPDATE slots set slot_booked = 1 WHERE start_time IN (SELECT start_time FROM slots WHERE email_sent = 0 AND slot_booked = 0 AND username = '$username');");
                     $sth->execute() or die $DBI::errstr;
                     send_mail($email, "Slot prenotato!", "Slot ". $hashref->{startTime} . " - " . $hashref->{endTime}) if $email ne '';
+                    last;
             }
         }
     }
