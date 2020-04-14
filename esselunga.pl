@@ -197,7 +197,8 @@ my $stmt = qq(CREATE TABLE IF NOT EXISTS slots
 (   username      TEXT NOT NULL,
     start_time    DATETIME NOT NULL,
     end_time      DATETIME NOT NULL,
-    email_sent    INTEGER     NOT NULL,
+    email_sent    INTEGER  NOT NULL DEFAULT 0,
+    slot_booked   INTEGER  NOT NULL DEFAULT 0,
     text          TEXT,
     PRIMARY KEY (username, start_time)););
 
@@ -293,7 +294,6 @@ sub bookslot {
     my $res = $ua->post($url, Content => encode_json($json));
     if ( $res->is_success ) {
         say "Slot " . $json->{startTime} . " prenotato!";
-        send_mail($email, "Slot prenotato!", "Slot ". $json->{startTime} . " - " . $json->{endTime}) if $email ne '';
         return 1;
     } else {
         say "Errore nella prenotazione slot " . $json->{startTime};
@@ -327,8 +327,6 @@ if ($xsfr eq ''){
     }
 
 }
-
-    return 1;
 
 $ua->default_header( 'Content-Type' => 'application/json' );
 $ua->default_header( 'X-XSRF-TOKEN' => $xsfr );
@@ -393,7 +391,7 @@ say "Check slot completo";
 if ($ok) {
     say "BINGO!";
     
-    my $sth = $dbh->prepare("SELECT start_time, end_time, text FROM slots WHERE email_sent = 0 AND username = '$username'")
+    my $sth = $dbh->prepare("SELECT start_time, end_time, text FROM slots WHERE email_sent = 0 AND slot_booked = 0 AND username = '$username'")
             or die "prepare statement failed: $dbh->errstr()";
     
     $sth->execute() or die "execution failed: $dbh->errstr()"; 
@@ -415,13 +413,17 @@ if ($ok) {
     if ($email ne '' && $message ne ''){
             send_mail($email, "Slot disponibili", $send_text);
             
-            $sth = $dbh->prepare("UPDATE slots set email_sent = 1 WHERE start_time IN (SELECT start_time FROM slots WHERE email_sent = 0 AND username = '$username');");
+            $sth = $dbh->prepare("UPDATE slots set email_sent = 1 WHERE start_time IN (SELECT start_time FROM slots WHERE email_sent = 0 AND slot_booked = 0 AND username = '$username');");
             $sth->execute() or die $DBI::errstr;  
     }
 
     if ($BOOKSLOT) {
         foreach my $hashref (@{slots}){            
-            last if bookslot($hashref);
+            if (bookslot($hashref)){
+                    $sth = $dbh->prepare("UPDATE slots set slot_booked = 1 WHERE start_time IN (SELECT start_time FROM slots WHERE email_sent = 0 AND slot_booked = 0 AND username = '$username');");
+                    $sth->execute() or die $DBI::errstr;
+                    send_mail($email, "Slot prenotato!", "Slot ". $hashref->{startTime} . " - " . $hashref->{endTime}) if $email ne '';
+            }
         }
     }
 } else {
