@@ -434,7 +434,11 @@ if ($ok) {
                         my $dt2 = `date -d $start_time +%s` ;
                         $dt2 =~ s/\n//g;
 
-                        $dt1 > $dt2 ? $book = 0 : $book = 1;
+                        if ($dt1 > $dt2) {
+                            $book = 0;
+                        }  else {
+                            $book = 1;
+                        }
                     }
                     if ($book && bookslot($hashref)){
                         $sth = $dbh->prepare("UPDATE slots set slot_booked = 1 WHERE start_time = '$hashref->{startTime}' AND username = '$username';");
