@@ -73,6 +73,8 @@ objects:
                   value: '${SMTP_PORT}'
                 - name: EMAIL_FROM
                   value: '${EMAIL_FROM}'
+                - name: BOOKING
+                  value: '${BOOKING_SLOT}'
             restartPolicy: Never
 parameters:
 - name: WEBSITE_USERNAME
@@ -121,6 +123,11 @@ parameters:
   description: Enable/Disable SSL/TLS for SMTP Server 
   from: '[0-1]{1}'
   value : '1'
+- name: BOOKING_SLOT
+  displayName: Flag to automatically book any available slot
+  description: If you want to automatically book the slot, Enable this flag. Slots are booked for 1h then you need to complete purchase from website.
+  from: '[0-1]{1}'
+  value : '0'
   required: true
 - name: VOLUME_CAPACITY
   displayName: Volume Capacity

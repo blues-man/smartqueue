@@ -27,19 +27,28 @@ Esselungaacasa.it smart free delivery slots alerting system
 ```
 ## Usage
 
+Check slots and print to STDOUT:
 ```
 $ ./esselunga.pl -u username -p password
-$ ./esselunga.pl -u username -p password -e email@test.com,email1@test.com,email2.test.com
-$ SMTP_SERVER=smtp.test.com SMTP_USER=test SMTP_PASS=pass SMTP_PORT=587 SMTP_SERVER_SSL=1 EMAIL_FROM=info@test.it ./esselunga.pl -u username -p password -e email@test.com,email1@test.com,email2.test.com
-$ USERNAME=username PASSWORD=password EMAIL=email@test.com SMTP_SERVER=smtp.test.com SMTP_USER=test SMTP_PASS=pass SMTP_PORT=587 SMTP_SERVER_SSL=1 EMAIL_FROM=info@test.it ./esselunga.pl
 ```
-
-
+Check slots and send email notifications (SMTP variables in the code):
+```
+$ ./esselunga.pl -u username -p password -e email@test.com,email1@test.com,email2.test.com
+```
+Check slots, send email and Book any available slot. If anyone already booked, book only if more recent:
+```
+$ ./esselunga.pl -u username -p password -e email@test.com,email1@test.com,email2.test.com -b
+```
+Check slots and send email notifications (SMTP variables and Booking as ENV):
+```
+$ SMTP_SERVER=smtp.test.com SMTP_USER=test SMTP_PASS=pass SMTP_PORT=587 SMTP_SERVER_SSL=1 EMAIL_FROM=info@test.it ./esselunga.pl -u username -p password -e email@test.com,email1@test.com,email2.test.com
+$ USERNAME=username PASSWORD=password EMAIL=email@test.com SMTP_SERVER=smtp.test.com SMTP_USER=test SMTP_PASS=pass SMTP_PORT=587 SMTP_SERVER_SSL=1 EMAIL_FROM=info@test.it BOOKING=1 ./esselunga.pl
+```
 ### Podman and Buildah
 
 ```
 $ buildah bud -t esselunga .
-$ podman run -e USERNAME=username PASSWORD=password EMAIL=email@test.com SMTP_SERVER=smtp.test.com SMTP_USER=test SMTP_PASS=pass SMTP_PORT=587 SMTP_SERVER_SSL=1 EMAIL_FROM=info@test.it -ti localhost/esselunga
+$ podman run -e USERNAME=username PASSWORD=password EMAIL=email@test.com SMTP_SERVER=smtp.test.com SMTP_USER=test SMTP_PASS=pass SMTP_PORT=587 SMTP_SERVER_SSL=1 EMAIL_FROM=info@test.it BOOKING=0 -ti localhost/esselunga
 ```
 
 ### Kubernetes
@@ -79,6 +88,8 @@ spec:
                 value: '1'
               - name: EMAIL_FROM
                 value: info@test.com
+              - name: BOOKING
+                value: '0'
           restartPolicy: Never
 ```
 
