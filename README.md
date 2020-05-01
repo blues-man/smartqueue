@@ -1,5 +1,5 @@
 # smartqueue
-Esselungaacasa.it smart free delivery slots alerting system
+Italian online supermarkets smart free delivery slots alerting system
 
 
 ## Dependency
